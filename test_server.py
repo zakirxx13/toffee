@@ -6,9 +6,7 @@ import time
 import requests
 from http.server import HTTPServer
 
-
-sys.path.insert(
-    0,
+sys.path.append(
     os.path.join(
         os.path.dirname(__file__),
         "api"
@@ -22,23 +20,17 @@ HOST = "127.0.0.1"
 PORT = 8081
 
 
-server = HTTPServer(
-    (HOST, PORT),
-    handler
-)
-
-
 def test_fetch():
-    time.sleep(2)
+    time.sleep(1)
 
-    url = f"http://{HOST}:{PORT}"
+    url = f"http://{HOST}:{PORT}/playlist.m3u8"
 
-    print(f"Fetching {url} ...")
+    print("Fetching:", url)
 
     try:
         response = requests.get(
             url,
-            timeout=30
+            timeout=15
         )
 
         print(
@@ -54,42 +46,41 @@ def test_fetch():
         )
 
         print(
-            "Response Length:",
+            "Playlist length:",
             len(response.text)
         )
 
         print("\nPreview:")
 
         print(
-            response.text[:1000]
+            "\n".join(
+                response.text.splitlines()[:10]
+            )
         )
 
     except Exception as error:
         print(
-            "Test failed:",
+            "Test error:",
             error
         )
 
     finally:
-        server.shutdown()
+        os._exit(0)
 
 
-thread = threading.Thread(
+server = HTTPServer(
+    (HOST, PORT),
+    handler
+)
+
+threading.Thread(
     target=test_fetch,
     daemon=True
-)
-
-thread.start()
+).start()
 
 print(
-    f"Starting server on http://{HOST}:{PORT}"
+    f"Server running at "
+    f"http://{HOST}:{PORT}"
 )
 
-try:
-    server.serve_forever()
-
-except KeyboardInterrupt:
-    print("Server stopped.")
-
-finally:
-    server.server_close()
+server.serve_forever()
