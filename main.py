@@ -1,4 +1,4 @@
-import json
+import re
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -6,8 +6,14 @@ import requests
 from bs4 import BeautifulSoup
 
 
-SOURCE_URL = "https://toffeelive.com/en/watch/wHLVIJ4B7a1HdMSjaGLJ"
+# =========================================================
+# CONFIG
+# =========================================================
+
+SOURCE_URL = "https://example.com/"
 OUTPUT_FILE = "playlist.m3u8"
+
+REQUEST_TIMEOUT = 20
 
 HEADERS = {
     "User-Agent": (
@@ -23,121 +29,124 @@ HEADERS = {
 }
 
 
-def fetch_page(url):
-    response = requests.get(
+# =========================================================
+# SESSION
+# =========================================================
+
+def create_session():
+    session = requests.Session()
+    session.headers.update(HEADERS)
+    return session
+
+
+# =========================================================
+# FETCH PAGE
+# =========================================================
+
+def fetch_page(session, url):
+    print("Fetching source page...")
+    print(url)
+
+    response = session.get(
         url,
-        headers=HEADERS,
-        timeout=20,
+        timeout=REQUEST_TIMEOUT,
         allow_redirects=True
     )
 
     response.raise_for_status()
-
-    return response
-
-
-def extract_media_sources(html, base_url):
-    soup = BeautifulSoup(
-        html,
-        "html.parser"
-    )
-
-    sources = []
-
-    for tag in soup.find_all(
-        ["video", "source"],
-        src=True
-    ):
-        src = tag.get("src", "").strip()
-
-        if not src:
-            continue
-
-        sources.append(
-            urljoin(base_url, src)
-        )
-
-    return list(dict.fromkeys(sources))
-
-
-def create_playlist(title, sources):
-    lines = [
-        "#EXTM3U"
-    ]
-
-    for index, url in enumerate(
-        sources,
-        start=1
-    ):
-        channel_name = (
-            title
-            if title
-            else f"Demo Channel {index}"
-        )
-
-        lines.append(
-            '#EXTINF:-1 '
-            f'tvg-name="{channel_name}" '
-            'group-title="Demo",'
-            f'{channel_name}'
-        )
-
-        lines.append(url)
-
-    return "\n".join(lines) + "\n"
-
-
-def generate_playlist():
-    print("Fetching source page...")
-
-    response = fetch_page(
-        SOURCE_URL
-    )
 
     print(
         "HTTP Status:",
         response.status_code
     )
 
+    print(
+        "Final URL:",
+        response.url
+    )
+
+    return response
+
+
+# =========================================================
+# PAGE TITLE
+# =========================================================
+
+def get_page_title(html):
     soup = BeautifulSoup(
-        response.text,
+        html,
         "html.parser"
     )
 
-    title_tag = soup.find("title")
+    title = soup.find("title")
 
-    title = ""
-
-    if title_tag:
-        title = title_tag.get_text(
+    if title:
+        value = title.get_text(
             " ",
             strip=True
         )
 
-    sources = extract_media_sources(
-        response.text,
-        response.url
+        if value:
+            return value
+
+    return "Demo Channel"
+
+
+# =========================================================
+# FIND PUBLIC M3U8 URLS
+# =========================================================
+
+def find_m3u8_urls(html, base_url):
+    found = []
+
+    # Direct URLs inside HTML
+    matches = re.findall(
+        r'https?://[^\s"\'<>]+?\.m3u8(?:\?[^\s"\'<>]*)?',
+        html,
+        re.IGNORECASE
     )
 
-    playlist = create_playlist(
-        title,
-        sources
+    for url in matches:
+        url = url.replace(
+            "\\/",
+            "/"
+        )
+
+        found.append(url)
+
+    # Relative .m3u8 paths
+    relative_matches = re.findall(
+        r'["\']([^"\']+\.m3u8(?:\?[^"\']*)?)["\']',
+        html,
+        re.IGNORECASE
     )
 
-    Path(OUTPUT_FILE).write_text(
-        playlist,
-        encoding="utf-8"
+    for url in relative_matches:
+        url = url.replace(
+            "\\/",
+            "/"
+        )
+
+        absolute_url = urljoin(
+            base_url,
+            url
+        )
+
+        found.append(
+            absolute_url
+        )
+
+    # Remove duplicates
+    unique_urls = list(
+        dict.fromkeys(found)
     )
 
-    print(
-        f"Playlist saved: {OUTPUT_FILE}"
-    )
-
-    print(
-        "Media sources found:",
-        len(sources)
-    )
+    return unique_urls
 
 
-if __name__ == "__main__":
-    generate_playlist()
+# =========================================================
+# FIND VIDEO / SOURCE ELEMENTS
+# =========================================================
+
+def find_media_sources(html, base_url):
+    soup =
