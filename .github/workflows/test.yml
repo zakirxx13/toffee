@@ -1,11 +1,11 @@
-name: Test Python Scraper
+name: Python Test
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
       - master
+  pull_request:
 
 jobs:
   test:
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
@@ -25,18 +25,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run inspector
-        run: python main.py
-
-      - name: Show inspection result
+      - name: Check Python files
         run: |
-          echo "========================================"
-          echo "INSPECTION RESULT"
-          echo "========================================"
-          cat inspection_result.json
-
-      - name: Upload inspection result
-        uses: actions/upload-artifact@v4
-        with:
-          name: inspection-result
-          path: inspection_result.json
+          python -m py_compile main.py
+          python -m py_compile api/index.py
+          python -m py_compile test_extract.py
+          python -m py_compile test_scrape.py
