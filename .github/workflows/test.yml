@@ -28,6 +28,11 @@ jobs:
       - name: Run inspector
         run: python main.py
 
+      - name: Show inspection result
+        run: |
+          echo "===== INSPECTION RESULT ====="
+          cat inspection_result.json
+
       - name: Upload inspection result
         uses: actions/upload-artifact@v4
         with:
