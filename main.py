@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 # CONFIG
 # =========================================================
 
-SOURCE_URL = "https://toffeelive.com/en/watch/qnv835oBcqxnFHJBuQcB"
+SOURCE_URL = "https://obiramtvlive.pages.dev/?channel=btv-shangshad#player"
 OUTPUT_FILE = "playlist.m3u8"
 
 REQUEST_TIMEOUT = 20
