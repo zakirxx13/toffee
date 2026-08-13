@@ -30,7 +30,9 @@ jobs:
 
       - name: Show inspection result
         run: |
-          echo "===== INSPECTION RESULT ====="
+          echo "========================================"
+          echo "INSPECTION RESULT"
+          echo "========================================"
           cat inspection_result.json
 
       - name: Upload inspection result
